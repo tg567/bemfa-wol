@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"strings"
@@ -12,31 +12,45 @@ import (
 )
 
 func tcpWOL() {
-	con, err := net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
-	if err != nil {
-		log.Println("tcp连接错误", err)
-		return
-	}
-	defer con.Close()
-
+	var con net.Conn
+	var err error
 	ch := make(chan struct{})
-	// 处理连接
-	go handleConnection(ch, con)
-	go heartbeat(con)
-	if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, topic))); err != nil {
-		log.Println("订阅topic错误", err)
-		return
-	}
+	var connectTime int32
+	for {
+		if connectTime > 5 {
+			println("连接失败次数过多，退出")
+			return
+		}
+		con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
+		if err != nil {
+			println("tcp连接错误", err)
+			connectTime++
+			continue
+		}
+		defer con.Close()
 
-	<-ch
-	time.Sleep(time.Second)
+		connectTime = 0
+
+		// 处理连接
+		ctx, cancel := context.WithCancel(context.Background())
+		go handleConnection(ctx, ch, con)
+		go heartbeat(ctx, con)
+		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, topic))); err != nil {
+			println("订阅topic错误", err)
+			cancel()
+			return
+		}
+		<-ch
+		cancel()
+		time.Sleep(time.Minute)
+	}
 }
 
 // 处理单个连接的函数
-func handleConnection(ch chan struct{}, con net.Conn) {
+func handleConnection(ctx context.Context, ch chan struct{}, con net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println(r)
+			println(r)
 		}
 	}()
 	// 这里可以添加具体的逻辑来处理连接
@@ -44,13 +58,14 @@ func handleConnection(ch chan struct{}, con net.Conn) {
 
 	for {
 		select {
-		case <-ch:
+		case <-ctx.Done():
+			println("done heartbeat")
 			return
 		default:
 			lineBytes, _, err := reader.ReadLine()
 			if err != nil {
-				close(ch)
-				log.Println("tcp read错误", err)
+				ch <- struct{}{}
+				println("tcp read错误", err)
 				return
 			}
 			line := string(lineBytes)
@@ -58,7 +73,7 @@ func handleConnection(ch chan struct{}, con net.Conn) {
 			line = strings.ReplaceAll(line, "\n", "")
 			values, err := url.ParseQuery(line)
 			if err != nil {
-				log.Println("解析参数错误", err)
+				println("解析参数错误", err)
 				continue
 			}
 			switch values.Get("cmd") {
@@ -66,28 +81,31 @@ func handleConnection(ch chan struct{}, con net.Conn) {
 				if values.Get("topic") == topic && values.Get("msg") == "on" {
 					wol()
 				}
-				fallthrough
-			default:
-				log.Println("返回参数", line)
+				println("返回参数", line)
 			}
 		}
-
 	}
+
 }
 
 // 处理单个连接的函数
-func heartbeat(con net.Conn) {
+func heartbeat(ctx context.Context, con net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println(r)
+			println(r)
 		}
 	}()
 	for {
-		log.Println("别关，小爱同学唤醒电脑用的！！！！！！")
-		time.Sleep(time.Minute)
-		_, err := con.Write([]byte("ping\r\n"))
-		if err != nil {
-			log.Println("heartbeat错误", err)
+		select {
+		case <-ctx.Done():
+			println("done heartbeat")
+			return
+		default:
+			time.Sleep(time.Minute)
+			_, err := con.Write([]byte("ping\r\n"))
+			if err != nil {
+				println("heartbeat错误", err)
+			}
 		}
 	}
 }

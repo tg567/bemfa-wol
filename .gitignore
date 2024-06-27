@@ -1,3 +1,4 @@
 .vscode
 go.sum
 main
+log.log
