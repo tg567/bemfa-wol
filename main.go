@@ -30,7 +30,7 @@ func main() {
 		var err error
 		file, err = os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 		if err != nil {
-			log.Println("日志文件路径不存在")
+			println("日志文件路径不存在")
 			return
 		}
 	}

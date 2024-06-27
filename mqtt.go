@@ -17,21 +17,21 @@ package main
 
 // 	token := client.Connect()
 // 	if !token.WaitTimeout(time.Second * 3) {
-// 		log.Println("mqtt连接 3秒超时")
+// 		println("mqtt连接 3秒超时")
 // 		return
 // 	}
 // 	if err := token.Error(); err != nil {
-// 		log.Println("token错误", err)
+// 		println("token错误", err)
 // 		return
 // 	}
 
 // 	client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
 // 		defer func() {
 // 			if r := recover(); r != nil {
-// 				log.Println(r)
+// 				println(r)
 // 			}
 // 		}()
-// 		log.Println("收到消息", string(msg.Payload()))
+// 		println("收到消息", string(msg.Payload()))
 // 		if string(msg.Payload()) == "on" {
 // 			wol()
 // 		}

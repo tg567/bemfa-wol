@@ -12,6 +12,7 @@ import (
 )
 
 func tcpWOL() {
+	println("tcpWOL start...")
 	var con net.Conn
 	var err error
 	ch := make(chan struct{})
