@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -79,8 +80,19 @@ func handleConnection(ctx context.Context, ch chan struct{}, con net.Conn) {
 			}
 			switch values.Get("cmd") {
 			case "2":
-				if values.Get("topic") == topic && values.Get("msg") == "on" {
-					wol()
+				if values.Get("topic") == topic {
+					switch values.Get("msg") {
+					case "on":
+						wol()
+					case "off":
+						output, err := exec.Command("ssh", shutdownUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
+						if err != nil {
+							println("ssh shutdown错误", err)
+						}
+						if string(output) != "" {
+							println("ssh shutdown output:", string(output))
+						}
+					}
 				}
 				println("返回参数", line)
 			}

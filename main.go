@@ -20,6 +20,8 @@ var mac = "00:00:00:00:00:00"
 // 机器网段
 var ipAddress = "192.168.1.255"
 
+var shutdownUserServer = "root@192.168.1.1"
+
 var logFile string
 var file *os.File
 
