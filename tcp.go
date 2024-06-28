@@ -13,7 +13,6 @@ import (
 )
 
 func tcpWOL() {
-	println("tcpWOL start...")
 	var con net.Conn
 	var err error
 	ch := make(chan struct{})
@@ -85,7 +84,7 @@ func handleConnection(ctx context.Context, ch chan struct{}, con net.Conn) {
 					case "on":
 						wol()
 					case "off":
-						output, err := exec.Command("ssh", shutdownUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
+						output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
 						if err != nil {
 							println("ssh shutdown错误", err)
 						}
@@ -142,7 +141,7 @@ func wol() {
 		}
 	}
 
-	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:9", ipAddress))
+	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:9", broadcastAddress))
 	if err != nil {
 		panic(err)
 	}
