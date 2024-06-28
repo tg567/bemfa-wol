@@ -3,7 +3,7 @@
 实现mqtt和tcp两种方式，自用tcp方式，mqtt方式已实现，但是注释了。
 
 ### 使用方式
-需要golang环境打包
+需要golang环境打包，开机功能需要同一网段下运行
 
 1.git clone项目，修改main.go中uid，topic，mac，ipAddress，shutdownUserServer为自己环境的值。
 
@@ -11,4 +11,6 @@
 
 3.```./wol -f ./wol.log```运行项目，-f 参数为日志文件路径，可省略仅输出到命令行。
 
-### 自用项目，对新手小白不友好。
+### 免责
+
+本项目为自用项目，对新手小白不友好
