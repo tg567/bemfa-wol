@@ -13,9 +13,13 @@ import (
 )
 
 func tcpWOL() {
+	defer func() {
+		if r := recover(); r != nil {
+			println(r)
+		}
+	}()
 	var con net.Conn
 	var err error
-	ch := make(chan struct{})
 	var connectTime int32
 	for {
 		con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
@@ -33,67 +37,54 @@ func tcpWOL() {
 
 		// 处理连接
 		ctx, cancel := context.WithCancel(context.Background())
-		go handleConnection(ctx, ch, con)
 		go heartbeat(ctx, con)
 		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, topic))); err != nil {
 			println("订阅topic错误", err)
 			cancel()
 			return
 		}
-		<-ch
+		handleConnection(con)
 		cancel()
-		time.Sleep(time.Minute)
 	}
 }
 
 // 处理单个连接的函数
-func handleConnection(ctx context.Context, ch chan struct{}, con net.Conn) {
-	defer func() {
-		if r := recover(); r != nil {
-			println(r)
-		}
-	}()
+func handleConnection(con net.Conn) {
+
 	// 这里可以添加具体的逻辑来处理连接
 	reader := bufio.NewReader(con)
 
 	for {
-		select {
-		case <-ctx.Done():
-			println("done heartbeat")
+		lineBytes, _, err := reader.ReadLine()
+		if err != nil {
+			println("tcp read错误", err)
 			return
-		default:
-			lineBytes, _, err := reader.ReadLine()
-			if err != nil {
-				ch <- struct{}{}
-				println("tcp read错误", err)
-				return
-			}
-			line := string(lineBytes)
-			line = strings.ReplaceAll(line, "\r", "")
-			line = strings.ReplaceAll(line, "\n", "")
-			values, err := url.ParseQuery(line)
-			if err != nil {
-				println("解析参数错误", err)
-				continue
-			}
-			switch values.Get("cmd") {
-			case "2":
-				if values.Get("topic") == topic {
-					switch values.Get("msg") {
-					case "on":
-						wol()
-					case "off":
-						output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
-						if err != nil {
-							println("ssh shutdown错误", err)
-						}
-						if string(output) != "" {
-							println("ssh shutdown output:", string(output))
-						}
+		}
+		line := string(lineBytes)
+		line = strings.ReplaceAll(line, "\r", "")
+		line = strings.ReplaceAll(line, "\n", "")
+		values, err := url.ParseQuery(line)
+		if err != nil {
+			println("解析参数错误", err)
+			continue
+		}
+		switch values.Get("cmd") {
+		case "2":
+			if values.Get("topic") == topic {
+				switch values.Get("msg") {
+				case "on":
+					wol()
+				case "off":
+					output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
+					if err != nil {
+						println("ssh shutdown错误", err)
+					}
+					if string(output) != "" {
+						println("ssh shutdown output:", string(output))
 					}
 				}
-				println("返回参数", line)
 			}
+			println("返回参数", line)
 		}
 	}
 
