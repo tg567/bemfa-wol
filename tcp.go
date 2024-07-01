@@ -18,14 +18,13 @@ func tcpWOL() {
 	ch := make(chan struct{})
 	var connectTime int32
 	for {
-		if connectTime > 5 {
-			println("连接失败次数过多，退出")
-			return
-		}
 		con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
 		if err != nil {
 			println("tcp连接错误", err)
-			connectTime++
+			time.Sleep(time.Minute * 5 * time.Duration(connectTime))
+			if connectTime < 6 {
+				connectTime++
+			}
 			continue
 		}
 		defer con.Close()
