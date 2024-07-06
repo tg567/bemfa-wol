@@ -10,12 +10,14 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/tg567/bemfa-wol/utils"
 )
 
 func tcpWOL() {
 	defer func() {
 		if r := recover(); r != nil {
-			println(r)
+			utils.Println(r)
 		}
 	}()
 	var con net.Conn
@@ -24,7 +26,7 @@ func tcpWOL() {
 	for {
 		con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
 		if err != nil {
-			println("tcp连接错误", err)
+			utils.Println("tcp连接错误", err)
 			time.Sleep(time.Minute * 5 * time.Duration(connectTime))
 			if connectTime < 6 {
 				connectTime++
@@ -38,8 +40,8 @@ func tcpWOL() {
 		// 处理连接
 		ctx, cancel := context.WithCancel(context.Background())
 		go heartbeat(ctx, con)
-		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, topic))); err != nil {
-			println("订阅topic错误", err)
+		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", utils.WolConfig.UID, utils.WolConfig.Topic))); err != nil {
+			utils.Println("订阅topic错误", err)
 			cancel()
 			return
 		}
@@ -57,7 +59,7 @@ func handleConnection(con net.Conn) {
 	for {
 		lineBytes, _, err := reader.ReadLine()
 		if err != nil {
-			println("tcp read错误", err)
+			utils.Println("tcp read错误", err)
 			return
 		}
 		line := string(lineBytes)
@@ -65,26 +67,26 @@ func handleConnection(con net.Conn) {
 		line = strings.ReplaceAll(line, "\n", "")
 		values, err := url.ParseQuery(line)
 		if err != nil {
-			println("解析参数错误", err)
+			utils.Println("解析参数错误", err)
 			continue
 		}
 		switch values.Get("cmd") {
 		case "2":
-			if values.Get("topic") == topic {
+			if values.Get("topic") == utils.WolConfig.Topic {
 				switch values.Get("msg") {
 				case "on":
 					wol()
 				case "off":
-					output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
+					output, err := exec.Command("ssh", utils.WolConfig.SSH, `shutdown`, `-s`, `-t`, `0`).Output()
 					if err != nil {
-						println("ssh shutdown错误", err)
+						utils.Println("ssh shutdown错误", err)
 					}
 					if string(output) != "" {
-						println("ssh shutdown output:", string(output))
+						utils.Println("ssh shutdown output:", string(output))
 					}
 				}
 			}
-			println("返回参数", line)
+			utils.Println("返回参数", line)
 		}
 	}
 
@@ -94,19 +96,19 @@ func handleConnection(con net.Conn) {
 func heartbeat(ctx context.Context, con net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
-			println(r)
+			utils.Println(r)
 		}
 	}()
 	for {
 		select {
 		case <-ctx.Done():
-			println("done heartbeat")
+			utils.Println("done heartbeat")
 			return
 		default:
 			time.Sleep(time.Minute)
 			_, err := con.Write([]byte("ping\r\n"))
 			if err != nil {
-				println("heartbeat错误", err)
+				utils.Println("heartbeat错误", err)
 			}
 		}
 	}
@@ -118,7 +120,7 @@ func wol() {
 		byteArray[i] = 0xFF
 	}
 
-	mac = strings.ReplaceAll(mac, ":", "")
+	mac := strings.ReplaceAll(utils.WolConfig.Mac, ":", "")
 	mac = strings.ReplaceAll(mac, "-", "")
 	macBytes, err := hex.DecodeString(mac)
 	if err != nil {
@@ -131,7 +133,7 @@ func wol() {
 		}
 	}
 
-	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:9", broadcastAddress))
+	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:9", utils.WolConfig.Broadcast))
 	if err != nil {
 		panic(err)
 	}

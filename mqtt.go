@@ -5,10 +5,11 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/tg567/bemfa-wol/utils"
 )
 
 func mqttWOL() {
-	clientID := uid
+	clientID := utils.WolConfig.UID
 	broker := "bemfa.com:9501"
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(broker)
@@ -24,31 +25,31 @@ func mqttWOL() {
 
 	token := client.Connect()
 	if !token.WaitTimeout(time.Second * 3) {
-		println("mqtt连接 3秒超时")
+		utils.Println("mqtt连接 3秒超时")
 		return
 	}
 	if err := token.Error(); err != nil {
-		println("token错误", err)
+		utils.Println("token错误", err)
 		return
 	}
 
-	client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
+	client.Subscribe(utils.WolConfig.Topic, 1, func(client mqtt.Client, msg mqtt.Message) {
 		defer func() {
 			if r := recover(); r != nil {
-				println(r)
+				utils.Println(r)
 			}
 		}()
-		println("收到消息", string(msg.Payload()))
+		utils.Println("收到消息", string(msg.Payload()))
 		switch string(msg.Payload()) {
 		case "on":
 			wol()
 		case "off":
-			output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
+			output, err := exec.Command("ssh", utils.WolConfig.SSH, `shutdown`, `-s`, `-t`, `0`).Output()
 			if err != nil {
-				println("ssh shutdown错误", err)
+				utils.Println("ssh shutdown错误", err)
 			}
 			if string(output) != "" {
-				println("ssh shutdown output:", string(output))
+				utils.Println("ssh shutdown output:", string(output))
 			}
 		}
 	})

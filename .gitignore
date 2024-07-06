@@ -1,4 +1,6 @@
 .vscode
 go.sum
 main
-log.log
+*.log
+wol.yaml
+*.exe
