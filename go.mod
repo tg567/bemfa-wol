@@ -1,4 +1,4 @@
-module gitlab.omytech.com.cn/micro-service/test2
+module github.com/tg567/bemfa-wol
 
 go 1.19
 
