@@ -1,4 +1,4 @@
-package main
+package connection
 
 import (
 	"os/exec"
@@ -8,7 +8,7 @@ import (
 	"github.com/tg567/bemfa-wol/utils"
 )
 
-func mqttWOL() {
+func MqttWOL(closeChan <-chan struct{}) {
 	clientID := utils.WolConfig.UID
 	broker := "bemfa.com:9501"
 	opts := mqtt.NewClientOptions()
@@ -32,6 +32,7 @@ func mqttWOL() {
 		utils.Println("token错误", err)
 		return
 	}
+	defer token.Done()
 
 	client.Subscribe(utils.WolConfig.Topic, 1, func(client mqtt.Client, msg mqtt.Message) {
 		defer func() {

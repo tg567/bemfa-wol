@@ -22,36 +22,52 @@ type Config struct {
 var WolConfig Config
 
 var logFileName, configFileName = "wol.log", "wol.yaml"
-var LogFile, ConfigFile *os.File
+var logFile, configFile *os.File
 
-func LoadConfig() {
+const (
+	WOL_TYPE_TCP  = "TCP"
+	WOL_TYPE_MQTT = "MQTT"
+)
+
+func LoadConfig() error {
 	pwd, err := os.Getwd()
 	if err != nil {
 		Println("获取当前目录错误", err)
-		return
+		return err
 	}
 
-	ConfigFile, err = os.OpenFile(path.Join(pwd, configFileName), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	configFile, err = os.OpenFile(path.Join(pwd, configFileName), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		Println("打开配置文件错误", err)
-		return
+		return err
 	}
-	LogFile, err = os.OpenFile(path.Join(pwd, logFileName), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	logFile, err = os.OpenFile(path.Join(pwd, logFileName), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		Println("打开配置文件错误", err)
-		return
+		return err
 	}
-	if err := yaml.NewDecoder(ConfigFile).Decode(&WolConfig); err != nil {
+	if err := yaml.NewDecoder(configFile).Decode(&WolConfig); err != nil {
 		Println("解析配置文件错误", err)
-		return
+		return err
 	}
+	return nil
+}
+
+func SaveConfig() error {
+	if err := configFile.Truncate(0); err != nil {
+		return err
+	}
+	if _, err := configFile.Seek(0, 0); err != nil {
+		return err
+	}
+	return yaml.NewEncoder(configFile).Encode(WolConfig)
 }
 
 func Println(a ...any) {
 	log.Println(a...)
-	if LogFile != nil {
+	if logFile != nil {
 		b := []any{time.Now().Format("2006-01-02 15:04:05")}
 		b = append(b, a...)
-		fmt.Fprintln(LogFile, b...)
+		fmt.Fprintln(logFile, b...)
 	}
 }
