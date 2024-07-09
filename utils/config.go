@@ -48,7 +48,6 @@ func LoadConfig() error {
 	}
 	if err := yaml.NewDecoder(configFile).Decode(&WolConfig); err != nil {
 		Println("解析配置文件错误", err)
-		return err
 	}
 	return nil
 }
