@@ -28,7 +28,7 @@ func initWindowWidget() {
 	broadcastAddressEntry.SetPlaceHolder("192.168.1.255")
 	sshUserServerEntry = widget.NewEntry()
 	sshUserServerEntry.SetPlaceHolder("root@192.168.1.1")
-	typeRadio = widget.NewRadioGroup([]string{utils.WOL_TYPE_MQTT, utils.WOL_TYPE_TCP}, func(s string) {})
+	typeRadio = widget.NewRadioGroup([]string{utils.WOL_TYPE_TCP, utils.WOL_TYPE_MQTT}, func(s string) {})
 	typeRadio.SetSelected(utils.WOL_TYPE_TCP)
 	typeRadio.Horizontal = true
 	saveButton = widget.NewButton("保存配置", func() {})
@@ -96,6 +96,7 @@ var saveAndRunFunc = func() {
 	if running {
 		running = false
 		close(closeChan)
+		saveAndRunButton.SetText("保存并运行")
 	} else {
 		closeChan = make(chan struct{})
 		saveConfig()
@@ -105,7 +106,7 @@ var saveAndRunFunc = func() {
 		}
 		switch utils.WolConfig.Type {
 		case utils.WOL_TYPE_MQTT:
-			connection.MqttWOL(closeChan)
+			go connection.MqttWOL(closeChan)
 		case utils.WOL_TYPE_TCP:
 			go connection.TcpWOL(closeChan)
 		default:

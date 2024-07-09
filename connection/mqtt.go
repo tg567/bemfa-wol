@@ -9,6 +9,12 @@ import (
 )
 
 func MqttWOL(closeChan <-chan struct{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			utils.Println(r)
+		}
+	}()
+	utils.Println("mqtt wol starting...")
 	clientID := utils.WolConfig.UID
 	broker := "bemfa.com:9501"
 	opts := mqtt.NewClientOptions()
@@ -54,5 +60,7 @@ func MqttWOL(closeChan <-chan struct{}) {
 			}
 		}
 	})
-
+	<-closeChan
+	client.Disconnect(0)
+	utils.Println("done mqtt client")
 }

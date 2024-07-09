@@ -19,6 +19,7 @@ func TcpWOL(closeChan <-chan struct{}) {
 			utils.Println(r)
 		}
 	}()
+	utils.Println("tcp wol starting...")
 	var con net.Conn
 	var err error
 	var connectTime int32
