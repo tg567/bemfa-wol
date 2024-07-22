@@ -2,3 +2,6 @@
 go.sum
 main
 log.log
+*.exe
+*.yaml
+*.log

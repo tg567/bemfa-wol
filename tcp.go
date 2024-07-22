@@ -31,7 +31,6 @@ func tcpWOL() {
 			}
 			continue
 		}
-		defer con.Close()
 
 		connectTime = 0
 
@@ -40,10 +39,12 @@ func tcpWOL() {
 		go heartbeat(ctx, con)
 		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, topic))); err != nil {
 			println("订阅topic错误", err)
+			con.Close()
 			cancel()
 			return
 		}
 		handleConnection(con)
+		con.Close()
 		cancel()
 	}
 }
