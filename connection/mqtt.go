@@ -8,7 +8,7 @@ import (
 	"github.com/tg567/bemfa-wol/utils"
 )
 
-func MqttWOL(closeChan <-chan struct{}) {
+func MqttWOL(stopChan <-chan struct{}) {
 	defer func() {
 		if r := recover(); r != nil {
 			utils.Println(r)
@@ -60,7 +60,7 @@ func MqttWOL(closeChan <-chan struct{}) {
 			}
 		}
 	})
-	<-closeChan
+	<-stopChan
 	client.Disconnect(0)
 	utils.Println("done mqtt client")
 }

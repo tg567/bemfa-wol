@@ -13,7 +13,9 @@ import (
 	"github.com/tg567/bemfa-wol/utils"
 )
 
-func TcpWOL(closeChan <-chan struct{}) {
+var ErrorClose = fmt.Errorf("close")
+
+func TcpWOL(stopChan <-chan struct{}) {
 	defer func() {
 		if r := recover(); r != nil {
 			utils.Println(r)
@@ -24,51 +26,50 @@ func TcpWOL(closeChan <-chan struct{}) {
 	var err error
 	var connectTime int32
 	for {
-		select {
-		case <-closeChan:
+		con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
+		if err != nil {
+			utils.Println("tcp连接错误", err)
+			time.Sleep(time.Minute * 5 * time.Duration(connectTime))
+			if connectTime < 6 {
+				connectTime++
+			}
+			continue
+		}
+
+		connectTime = 0
+
+		// 处理连接
+		go heartbeat(stopChan, con)
+		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", utils.WolConfig.UID, utils.WolConfig.Topic))); err != nil {
+			con.Close()
+			utils.Println("订阅topic错误", err)
+			return
+		}
+		err := handleConnection(stopChan, con)
+		if err == ErrorClose {
+			con.Close()
 			utils.Println("done TcpWOL")
 			return
-		default:
-			con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
-			if err != nil {
-				utils.Println("tcp连接错误", err)
-				time.Sleep(time.Minute * 5 * time.Duration(connectTime))
-				if connectTime < 6 {
-					connectTime++
-				}
-				continue
-			}
-			defer con.Close()
-
-			connectTime = 0
-
-			// 处理连接
-			go heartbeat(closeChan, con)
-			if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", utils.WolConfig.UID, utils.WolConfig.Topic))); err != nil {
-				utils.Println("订阅topic错误", err)
-				return
-			}
-			handleConnection(closeChan, con)
 		}
+		con.Close()
 	}
 }
 
 // 处理单个连接的函数
-func handleConnection(closeChan <-chan struct{}, con net.Conn) {
-
+func handleConnection(stopChan <-chan struct{}, con net.Conn) error {
 	// 这里可以添加具体的逻辑来处理连接
 	reader := bufio.NewReader(con)
 
 	for {
 		select {
-		case <-closeChan:
+		case <-stopChan:
 			utils.Println("done handleConnection")
-			return
+			return ErrorClose
 		default:
 			lineBytes, _, err := reader.ReadLine()
 			if err != nil {
 				utils.Println("tcp read错误", err)
-				return
+				return err
 			}
 			line := string(lineBytes)
 			line = strings.ReplaceAll(line, "\r", "")
@@ -98,11 +99,10 @@ func handleConnection(closeChan <-chan struct{}, con net.Conn) {
 			}
 		}
 	}
-
 }
 
 // 处理单个连接的函数
-func heartbeat(closeChan <-chan struct{}, con net.Conn) {
+func heartbeat(stopChan <-chan struct{}, con net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
 			utils.Println(r)
@@ -110,7 +110,7 @@ func heartbeat(closeChan <-chan struct{}, con net.Conn) {
 	}()
 	for {
 		select {
-		case <-closeChan:
+		case <-stopChan:
 			utils.Println("done heartbeat")
 			return
 		default:

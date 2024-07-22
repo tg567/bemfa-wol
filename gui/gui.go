@@ -15,7 +15,7 @@ var (
 	typeRadio                                                                 *widget.RadioGroup
 	saveButton, saveAndRunButton                                              *widget.Button
 	running                                                                   bool
-	closeChan                                                                 chan struct{}
+	stopChan                                                                  chan struct{}
 )
 
 func initWindowWidget() {
@@ -95,10 +95,10 @@ func LoadWindow() fyne.Window {
 var saveAndRunFunc = func() {
 	if running {
 		running = false
-		close(closeChan)
+		close(stopChan)
 		saveAndRunButton.SetText("保存并运行")
 	} else {
-		closeChan = make(chan struct{})
+		stopChan = make(chan struct{})
 		saveConfig()
 		if utils.WolConfig.UID == "" || utils.WolConfig.Topic == "" || utils.WolConfig.Mac == "" || utils.WolConfig.Broadcast == "" {
 			utils.Println("唤醒参数不能为空")
@@ -106,9 +106,9 @@ var saveAndRunFunc = func() {
 		}
 		switch utils.WolConfig.Type {
 		case utils.WOL_TYPE_MQTT:
-			go connection.MqttWOL(closeChan)
+			go connection.MqttWOL(stopChan)
 		case utils.WOL_TYPE_TCP:
-			go connection.TcpWOL(closeChan)
+			go connection.TcpWOL(stopChan)
 		default:
 			utils.Println("通信类型错误")
 			return
