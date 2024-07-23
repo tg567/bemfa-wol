@@ -6,12 +6,13 @@
 
 需要golang环境打包
 
-命令行打包
+#### 命令行打包
+
 1.git clone项目,切换到main分支。
 
 2.```GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o wol```打包命令，根据使用环境更改GOOS和GOARCH的值；运行在路由器上等存储空间小的设备，打包建议用tcp连接方式，并且注释掉mqtt相关代码运行```go mod tidy```命令后再打包，减小执行文件大小。
 
-GUI打包
+#### GUI打包
 
 1.git clone项目,切换到gui分支。
 
@@ -21,7 +22,7 @@ go install fyne.io/fyne/v2/cmd/fyne@latest
 fyne install
 ```
 
-3.```CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc fyne release -os windows -appID com.tg567.bemfawol -appVersion 1.0.0 -icon ./icon.png -appBuild 1 -developer tg567 -certificate 123456 -password 123456```打包命令,参数参考fyne项目或命令```fyne release -h```
+3.```CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc fyne release -os windows -appID com.tg567.bemfawol -appVersion 1.0.0 -icon ./icon.png -appBuild 1 -developer tg567 -certificate 123456 -password 123456```打包命令,参数参考[fyne项目](https://github.com/fyne-io/fyne)或命令```fyne release -h```
 
 ### 使用
 
