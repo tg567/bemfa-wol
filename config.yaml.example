@@ -1,0 +1,12 @@
+uid: xxxxxxxxxxxxxxxxxxxxx
+log_file: ./wol.log
+type: tcp
+devices: 
+  - mac: 00:00:00:00:00:00
+    topic: xxx1
+    broadcast: 192.168.1.255
+    ssh: root@192.168.1.1
+  - mac: 00:00:00:00:00:01
+    topic: xxx2
+    broadcast: 192.168.1.255
+    ssh: root@192.168.1.2

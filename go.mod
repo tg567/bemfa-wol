@@ -2,7 +2,10 @@ module github.com/tg567/bemfa-wol
 
 go 1.19
 
-require github.com/eclipse/paho.mqtt.golang v1.4.3
+require (
+	github.com/eclipse/paho.mqtt.golang v1.4.3
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/gorilla/websocket v1.5.0 // indirect

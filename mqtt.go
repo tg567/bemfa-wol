@@ -7,7 +7,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func mqttWOL() {
+func mqttWOL(devices []Device, uid string) {
 	clientID := uid
 	broker := "bemfa.com:9501"
 	opts := mqtt.NewClientOptions()
@@ -32,25 +32,26 @@ func mqttWOL() {
 		return
 	}
 
-	client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
-		defer func() {
-			if r := recover(); r != nil {
-				println(r)
+	for i := range devices {
+		client.Subscribe(devices[i].Topic, 1, func(client mqtt.Client, msg mqtt.Message) {
+			defer func() {
+				if r := recover(); r != nil {
+					println(r)
+				}
+			}()
+			println("收到消息", string(msg.Payload()))
+			switch string(msg.Payload()) {
+			case "on":
+				wol(&devices[i])
+			case "off":
+				output, err := exec.Command("ssh", devices[i].SSH, `shutdown`, `-s`, `-t`, `0`).Output()
+				if err != nil {
+					println("ssh shutdown错误", err)
+				}
+				if string(output) != "" {
+					println("ssh shutdown output:", string(output))
+				}
 			}
-		}()
-		println("收到消息", string(msg.Payload()))
-		switch string(msg.Payload()) {
-		case "on":
-			wol()
-		case "off":
-			output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
-			if err != nil {
-				println("ssh shutdown错误", err)
-			}
-			if string(output) != "" {
-				println("ssh shutdown output:", string(output))
-			}
-		}
-	})
-
+		})
+	}
 }

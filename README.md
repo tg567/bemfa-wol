@@ -26,7 +26,9 @@ fyne install
 
 ### 使用
 
-开机功能需要同一网段下运行
+开机功能需要同一网段下运行，命令行传参只支持单个设备唤醒开机关机，配置文件支持多个设备唤醒开机关机
+
+#### 命令行传参
 
 运行命令：```./wol -uid xxx -topic xxx -mac 00:00:00:00:00:00 -broadcast 192.168.1.255 -ssh root@192.168.1.1```
 
@@ -46,4 +48,24 @@ fyne install
         wol type, tcp/mqtt (default "tcp")
   -uid string
         bemfa uid
+```
+
+#### 配置文件运行
+
+运行命令：```./wol -c config.yaml```
+
+yaml配置可参考config.yaml.example文件，配置项如下:
+```yaml
+uid: xxxxxxxxxxxxxxxxxxxxx
+log_file: ./wol.log
+type: tcp
+devices: 
+  - mac: 00:00:00:00:00:00
+    topic: xxx1
+    broadcast: 192.168.1.255
+    ssh: root@192.168.1.1
+  - mac: 00:00:00:00:00:01
+    topic: xxx2
+    broadcast: 192.168.1.255
+    ssh: root@192.168.1.2
 ```

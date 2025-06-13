@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func tcpWOL() {
+func tcpWOL(device *Device, uid string) {
 	defer func() {
 		if r := recover(); r != nil {
 			println(r)
@@ -37,20 +37,20 @@ func tcpWOL() {
 		// 处理连接
 		ctx, cancel := context.WithCancel(context.Background())
 		go heartbeat(ctx, con)
-		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, topic))); err != nil {
+		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, device.Topic))); err != nil {
 			println("订阅topic错误", err)
 			con.Close()
 			cancel()
 			return
 		}
-		handleConnection(con)
+		handleConnection(con, device)
 		con.Close()
 		cancel()
 	}
 }
 
 // 处理单个连接的函数
-func handleConnection(con net.Conn) {
+func handleConnection(con net.Conn, device *Device) {
 
 	// 这里可以添加具体的逻辑来处理连接
 	reader := bufio.NewReader(con)
@@ -71,12 +71,12 @@ func handleConnection(con net.Conn) {
 		}
 		switch values.Get("cmd") {
 		case "2":
-			if values.Get("topic") == topic {
+			if values.Get("topic") == device.Topic {
 				switch values.Get("msg") {
 				case "on":
-					wol()
+					wol(device)
 				case "off":
-					output, err := exec.Command("ssh", sshUserServer, `shutdown`, `-s`, `-t`, `0`).Output()
+					output, err := exec.Command("ssh", device.SSH, `shutdown`, `-s`, `-t`, `0`).Output()
 					if err != nil {
 						println("ssh shutdown错误", err)
 					}
@@ -113,12 +113,13 @@ func heartbeat(ctx context.Context, con net.Conn) {
 	}
 }
 
-func wol() {
+func wol(device *Device) {
 	byteArray := make([]byte, 102)
 	for i := 0; i < 6; i++ {
 		byteArray[i] = 0xFF
 	}
 
+	mac := device.MAC
 	mac = strings.ReplaceAll(mac, ":", "")
 	mac = strings.ReplaceAll(mac, "-", "")
 	macBytes, err := hex.DecodeString(mac)
@@ -132,7 +133,7 @@ func wol() {
 		}
 	}
 
-	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:9", broadcastAddress))
+	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:9", device.Broadcast))
 	if err != nil {
 		panic(err)
 	}
