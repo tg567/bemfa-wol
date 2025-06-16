@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func tcpWOL(device *Device, uid string) {
+func tcpWOL(devices []Device, uid string) {
 	defer func() {
 		if r := recover(); r != nil {
 			println(r)
@@ -21,6 +21,7 @@ func tcpWOL(device *Device, uid string) {
 	var con net.Conn
 	var err error
 	var connectTime int32
+
 	for {
 		con, err = net.DialTimeout("tcp", "bemfa.com:8344", 5*time.Second)
 		if err != nil {
@@ -37,58 +38,56 @@ func tcpWOL(device *Device, uid string) {
 		// 处理连接
 		ctx, cancel := context.WithCancel(context.Background())
 		go heartbeat(ctx, con)
-		if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, device.Topic))); err != nil {
-			println("订阅topic错误", err)
-			con.Close()
-			cancel()
-			return
+		deviceMap := make(map[string]Device, len(devices))
+		for _, v := range devices {
+			deviceMap[v.Topic] = v
+			if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, v.Topic))); err != nil {
+				println("订阅topic错误", err)
+				con.Close()
+				cancel()
+				return
+			}
 		}
-		handleConnection(con, device)
+
+		reader := bufio.NewReader(con)
+		for {
+			lineBytes, _, err := reader.ReadLine()
+			if err != nil {
+				println("tcp read错误", err)
+				break
+			}
+			line := string(lineBytes)
+			line = strings.ReplaceAll(line, "\r", "")
+			line = strings.ReplaceAll(line, "\n", "")
+			values, err := url.ParseQuery(line)
+			if err != nil {
+				println("解析参数错误", err)
+				continue
+			}
+			device, ok := deviceMap[values.Get("topic")]
+			if values.Get("cmd") == "2" && ok {
+				handleDeviceOperation(&device, values.Get(`msg`))
+			}
+		}
 		con.Close()
 		cancel()
 	}
 }
 
-// 处理单个连接的函数
-func handleConnection(con net.Conn, device *Device) {
-
-	// 这里可以添加具体的逻辑来处理连接
-	reader := bufio.NewReader(con)
-
-	for {
-		lineBytes, _, err := reader.ReadLine()
+func handleDeviceOperation(device *Device, msg string) {
+	println(msg, device)
+	switch msg {
+	case "on":
+		wol(device)
+	case "off":
+		output, err := exec.Command("ssh", fmt.Sprintf(`%s@%s`, device.User, device.IP), `shutdown`, `-s`, `-t`, `0`).Output()
 		if err != nil {
-			println("tcp read错误", err)
-			return
+			println("ssh shutdown错误", err)
 		}
-		line := string(lineBytes)
-		line = strings.ReplaceAll(line, "\r", "")
-		line = strings.ReplaceAll(line, "\n", "")
-		values, err := url.ParseQuery(line)
-		if err != nil {
-			println("解析参数错误", err)
-			continue
-		}
-		switch values.Get("cmd") {
-		case "2":
-			if values.Get("topic") == device.Topic {
-				switch values.Get("msg") {
-				case "on":
-					wol(device)
-				case "off":
-					output, err := exec.Command("ssh", device.SSH, `shutdown`, `-s`, `-t`, `0`).Output()
-					if err != nil {
-						println("ssh shutdown错误", err)
-					}
-					if string(output) != "" {
-						println("ssh shutdown output:", string(output))
-					}
-				}
-			}
-			println("返回参数", line)
+		if string(output) != "" {
+			println("ssh shutdown output:", string(output))
 		}
 	}
-
 }
 
 // 处理单个连接的函数
@@ -98,13 +97,13 @@ func heartbeat(ctx context.Context, con net.Conn) {
 			println(r)
 		}
 	}()
+	t := time.NewTicker(time.Minute)
 	for {
 		select {
 		case <-ctx.Done():
 			println("done heartbeat")
 			return
-		default:
-			time.Sleep(time.Minute)
+		case <-t.C:
 			_, err := con.Write([]byte("ping\r\n"))
 			if err != nil {
 				println("heartbeat错误", err)

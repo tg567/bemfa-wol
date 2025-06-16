@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os/exec"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -40,18 +39,7 @@ func mqttWOL(devices []Device, uid string) {
 				}
 			}()
 			println("收到消息", string(msg.Payload()))
-			switch string(msg.Payload()) {
-			case "on":
-				wol(&devices[i])
-			case "off":
-				output, err := exec.Command("ssh", devices[i].SSH, `shutdown`, `-s`, `-t`, `0`).Output()
-				if err != nil {
-					println("ssh shutdown错误", err)
-				}
-				if string(output) != "" {
-					println("ssh shutdown output:", string(output))
-				}
-			}
+			handleDeviceOperation(&devices[i], string(msg.Payload()))
 		})
 	}
 }

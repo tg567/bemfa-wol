@@ -19,7 +19,8 @@ func main() {
 	flag.StringVar(&param.Topic, "topic", "", "topic")
 	flag.StringVar(&param.MAC, "mac", "", "mac")
 	flag.StringVar(&param.Broadcast, "broadcast", "", "broadcast address")
-	flag.StringVar(&param.SSH, "ssh", "", "ssh user@ipaddress")
+	flag.StringVar(&param.User, "user", "", "ssh user")
+	flag.StringVar(&param.IP, "ip", "", "ssh ip")
 	flag.StringVar(&param.LogFile, "f", "", "log file path")
 	flag.StringVar(&param.Type, "type", "tcp", "wol type, tcp/mqtt")
 	flag.StringVar(&configPath, "c", "", "config file path")
@@ -50,10 +51,8 @@ func main() {
 	}
 
 	if strings.ToLower(config.Type) == "tcp" {
-		for i := range config.Devices {
-			//tcp网络唤醒
-			go tcpWOL(&config.Devices[i], config.UID)
-		}
+		//tcp网络唤醒
+		go tcpWOL(config.Devices, config.UID)
 		println("tcpWOL start...")
 	} else {
 		//mqtt网络唤醒

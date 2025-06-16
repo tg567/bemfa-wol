@@ -19,7 +19,8 @@ type Device struct {
 	Topic     string `yaml:"topic"`     //"xxx"
 	MAC       string `yaml:"mac"`       //"00:00:00:00:00:00"
 	Broadcast string `yaml:"broadcast"` //"192.168.1.255"
-	SSH       string `yaml:"ssh"`       //"root@192.168.1.1"
+	User      string `yaml:"user"`
+	IP        string `yaml:"ip"`
 }
 
 type paramDevice struct {
