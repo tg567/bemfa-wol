@@ -35,19 +35,23 @@ func tcpWOL(devices []Device, uid string) {
 
 		connectTime = 0
 
-		// 处理连接
-		ctx, cancel := context.WithCancel(context.Background())
-		go heartbeat(ctx, con)
-		deviceMap := make(map[string]Device, len(devices))
+		ipMap := make(map[string]Device, len(devices))
+		topicMap := make(map[string]Device, len(devices))
 		for _, v := range devices {
-			deviceMap[v.Topic] = v
+			topicMap[v.Topic] = v
+			if v.IP != "" {
+				ipMap[v.IP] = v
+			}
 			if _, err := con.Write([]byte(fmt.Sprintf("cmd=1&uid=%s&topic=%s\r\n", uid, v.Topic))); err != nil {
 				println("订阅topic错误", err)
 				con.Close()
-				cancel()
 				return
 			}
 		}
+		ctx, cancel := context.WithCancel(context.Background())
+		pHandler := newTCPPingHandler(uid, ipMap, con)
+		go pHandler.ping(ctx, true)
+		go heartbeat(ctx, con)
 
 		reader := bufio.NewReader(con)
 		for {
@@ -64,7 +68,7 @@ func tcpWOL(devices []Device, uid string) {
 				println("解析参数错误", err)
 				continue
 			}
-			device, ok := deviceMap[values.Get("topic")]
+			device, ok := topicMap[values.Get("topic")]
 			if values.Get("cmd") == "2" && ok {
 				handleDeviceOperation(&device, values.Get(`msg`))
 			}
@@ -80,7 +84,7 @@ func handleDeviceOperation(device *Device, msg string) {
 	case "on":
 		wol(device)
 	case "off":
-		output, err := exec.Command("ssh", fmt.Sprintf(`%s@%s`, device.User, device.IP), `shutdown`, `-s`, `-t`, `0`).Output()
+		output, err := exec.Command("ssh", fmt.Sprintf(`%s@%s`, device.User, device.IP), "-p", fmt.Sprintf("%d", device.SSHPort), `shutdown`, `-s`, `-t`, `0`).Output()
 		if err != nil {
 			println("ssh shutdown错误", err)
 		}

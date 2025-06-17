@@ -10,32 +10,19 @@ import (
 )
 
 var file *os.File
-var configPath string
 var config *Setting
 
 func main() {
-	var param paramDevice
-	flag.StringVar(&param.UID, "uid", "", "bemfa uid")
-	flag.StringVar(&param.Topic, "topic", "", "topic")
-	flag.StringVar(&param.MAC, "mac", "", "mac")
-	flag.StringVar(&param.Broadcast, "broadcast", "", "broadcast address")
-	flag.StringVar(&param.User, "user", "", "ssh user")
-	flag.StringVar(&param.IP, "ip", "", "ssh ip")
-	flag.StringVar(&param.LogFile, "f", "", "log file path")
-	flag.StringVar(&param.Type, "type", "tcp", "wol type, tcp/mqtt")
+	var configPath string
 	flag.StringVar(&configPath, "c", "", "config file path")
 	flag.Parse()
 
-	if configPath != "" {
-		var err error
-		config, err = loadSetting(configPath)
-		if err != nil {
-			println("打开配置文件错误", err)
-		}
-	} else {
-		config = new(Setting)
-		config.initParam(&param)
+	var err error
+	config, err = loadSetting(configPath)
+	if err != nil {
+		println("打开配置文件错误", err)
 	}
+
 	if config.LogFile != "" {
 		var err error
 		file, err = os.OpenFile(config.LogFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)

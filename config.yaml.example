@@ -1,14 +1,18 @@
-uid: xxxxxxxxxxxxxxxxxxxxx
+uid: xxxxxxxxxxxxxxxx
 log_file: ./wol.log
 type: tcp
 devices: 
   - mac: 00:00:00:00:00:00
-    topic: xxx1
+    topic: xxxx
+# broadcast不填时，取ip地址对应的广播地址，没有ip地址时必填
     broadcast: 192.168.1.255
     user: xxx
     ip: 192.168.1.1
+#    ssh_port: 22
   - mac: 00:00:00:00:00:01
-    topic: xxx2
+    topic: xxxxx
+# broadcast不填时，取ip地址对应的广播地址，没有ip地址时必填
     broadcast: 192.168.1.255
     user: xxx
     ip: 192.168.1.2
+#    ssh_port: 22
